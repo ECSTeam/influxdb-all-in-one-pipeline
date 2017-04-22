@@ -10,6 +10,7 @@ versionfile=`pwd`/version/number
 num=`cat ${versionfile}`
 
 curl -Lo ${basedir}/cf-linux-amd64.tgz 'http://cli.run.pivotal.io/stable?release=linux64-binary&source=github-rel'
+curl -Lo ${basedir}/jq 'https://github.com/stedolan/jq/releases/download/jq-1.5/jq-linux64'
 
 cd ${basedir}/bosh-release-source
 
@@ -22,6 +23,7 @@ blobstore:
 EOF
 
 bosh add blob ${basedir}/cf-linux-amd64.tgz cf_cli
+bosh add blob ${basedir}/jq jq
 bosh add blob ${basedir}/nozzle-binary/influxdb-nozzle.jar influxdb_nozzle
 
 bosh -n upload blobs
