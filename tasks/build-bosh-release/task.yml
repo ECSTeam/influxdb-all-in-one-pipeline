@@ -15,5 +15,8 @@ inputs:
 outputs:
 - name: build-bosh-release-output
 
+params:
+  BLOBSTORE_SECRET:
+
 run:
   path: pipeline-source/tasks/build-bosh-release/task.sh

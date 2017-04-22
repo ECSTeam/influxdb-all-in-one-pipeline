@@ -182,6 +182,8 @@ jobs:
     - get: pipeline-source
   - task: build-bosh-release
     file: pipeline-source/tasks/build-bosh-release/task.yml
+    params:
+      BLOBSTORE_SECRET: {{bosh-blobstore-secret}}
   - put: bosh-release-binary
     params:
       name: version/number
