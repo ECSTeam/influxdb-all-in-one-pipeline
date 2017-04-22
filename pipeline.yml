@@ -143,15 +143,15 @@ jobs:
     file: pipeline-source/tasks/build-jar/task.yml
   - put: nozzle-binary
     params:
-      name: nozzle-version/number
-      tag: nozzle-version/number
+      name: version/number
+      tag: version/number
       tag_prefix: v
       globs:
       - build-nozzle-output/influxdb-nozzle.jar
   - put: nozzle-version
     params:
       bump: patch
-      file: nozzle-version/number
+      file: version/number
   on_success: *generic_success_notification
   on_failure: *generic_failure_notificaton
 
@@ -182,6 +182,17 @@ jobs:
     - get: pipeline-source
   - task: build-bosh-release
     file: pipeline-source/tasks/build-bosh-release/task.yml
+  - put: bosh-release-binary
+    params:
+      name: version/number
+      tag: version/number
+      tag_prefix: v
+      globs:
+      - build-bosh-release-output/*.tgz
+  - put: bosh-release-version
+    params:
+      bump: patch
+      file: version/number
   on_success: *generic_success_notification
   on_failure: *generic_failure_notificaton
 
