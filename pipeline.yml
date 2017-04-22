@@ -42,6 +42,9 @@ groups:
   - influxdb-nozzle-bosh-release
   - bump-bosh-release-minor
   - bump-bosh-release-major
+- name: Tile
+  jobs:
+  - influxdb-tile
 
 resources:
 - name: nozzle-source
@@ -236,7 +239,7 @@ jobs:
       resource: tile-version
     - get: pipeline-source
   - task: build-tile
-    file: pipeline-source/tasks/build-tile/tile.yml
+    file: pipeline-source/tasks/build-tile/task.yml
   - put: tile-binary
     params:
       name: version/number

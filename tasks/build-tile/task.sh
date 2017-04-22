@@ -12,7 +12,7 @@ OUTPUT_DIR=${BASEDIR}/build-tile-output
 
 CURRENT_VERSION=`cat ${VERSION_DIR}/version`
 
-cp ${BOSH_RELEASE_DIR}/influxdb-nozzle-bosh-release-$(cat ${BOSH_RELEASE_DIR}/tag).tgz \
+cp ${BOSH_RELEASE_DIR}/influxdb-nozzle-bosh-release-$(cat ${BOSH_RELEASE_DIR}/version).tgz \
 	${TILE_SOURCE_DIR}/resources/influxdb-nozzle-bosh-release.tgz
 
 cd ${TILE_SOURCE_DIR}
