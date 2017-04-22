@@ -45,6 +45,8 @@ groups:
 - name: Tile
   jobs:
   - influxdb-tile
+  - bump-tile-minor
+  - bump-tile-major
 
 resources:
 - name: nozzle-source
@@ -116,7 +118,7 @@ resources:
   type: github-release
   source:
     user: ECSTeam
-    repository: influxdb-all-in-one-pipeline
+    repository: influxdb-tile
     access_token: {{github-access-token}}
 
 - name: pipeline-source
