@@ -16,6 +16,9 @@ cp ${BOSH_RELEASE_DIR}/influxdb-nozzle-bosh-release-$(cat ${BOSH_RELEASE_DIR}/ve
 	${TILE_SOURCE_DIR}/resources/influxdb-nozzle-bosh-release.tgz
 
 cd ${TILE_SOURCE_DIR}
+
+sed -i .template -e "s/REPLACE_ME_VERSION/${CURRENT_VERSION}/g" tile.yml
+
 tile build ${CURRENT_VERSION}
 
 cp product/ecsteam-influxdb-${CURRENT_VERSION}.pivotal ${OUTPUT_DIR}
