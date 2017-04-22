@@ -92,29 +92,29 @@ resources:
     repository: influxdb-nozzle-bosh-release
     access_token: {{github-access-token}}
 
-# - name: tile-source
-#   type: git
-#   source:
-#     uri: git@github.com:ecsteam/influxdb-tile.git
-#     branch: {{tile-branch}}
-#     private_key: {{github-private-key}}
+- name: tile-source
+  type: git
+  source:
+    uri: git@github.com:ecsteam/influxdb-tile.git
+    branch: {{tile-branch}}
+    private_key: {{github-private-key}}
 
-# - name: tile-version
-#   type: semver
-#   source:
-#     bucket: {{version-s3-bucket}}
-#     key: {{tile-version-s3-key}}
-#     access_key_id: {{version-s3-access-key}}
-#     secret_access_key: {{version-s3-secret-key}}
-#     region_name: {{version-s3-region}}
-#     initial_version: 0.4.3
-#
-# - name: tile-binary
-#   type: github-release
-#   source:
-#     user: ECSTeam
-#     repository: influxdb-all-in-one-pipeline
-#     access_token: {{github-access-token}}
+- name: tile-version
+  type: semver
+  source:
+    bucket: {{version-s3-bucket}}
+    key: {{tile-version-s3-key}}
+    access_key_id: {{version-s3-access-key}}
+    secret_access_key: {{version-s3-secret-key}}
+    region_name: {{version-s3-region}}
+    initial_version: 0.4.3
+
+- name: tile-binary
+  type: github-release
+  source:
+    user: ECSTeam
+    repository: influxdb-all-in-one-pipeline
+    access_token: {{github-access-token}}
 
 - name: pipeline-source
   type: git
@@ -164,7 +164,6 @@ jobs:
   - put: nozzle-version
     params:
       bump: patch
-      file: version/number
   on_success: *generic_success_notification
   on_failure: *generic_failure_notificaton
 
@@ -207,9 +206,9 @@ jobs:
   - put: bosh-release-version
     params:
       bump: patch
-      file: version/number
   on_success: *generic_success_notification
   on_failure: *generic_failure_notificaton
+
 
 - name: bump-bosh-release-minor
   public: true
@@ -225,3 +224,43 @@ jobs:
     params: { bump: major }
   - put: bosh-release-version
     params: { file: bosh-release-version/number }
+
+- name: influxdb-tile
+  plan:
+  - aggregate:
+    - get: tile-source
+      trigger: true
+    - get: bosh-release-binary
+      trigger: true
+    - get: version
+      resource: tile-version
+    - get: pipeline-source
+  - task: build-tile
+    file: pipeline-source/tasks/build-tile/tile.yml
+  - put: tile-binary
+    params:
+      name: version/number
+      tag: version/number
+      tag_prefix: v
+      globs:
+      - build-tile-output/*.pivotal
+  - put: tile-version
+    params:
+      bump: patch
+  on_success: *generic_success_notification
+  on_failure: *generic_failure_notificaton
+
+- name: bump-tile-minor
+  public: true
+  plan:
+  - get: tile-version
+    params: { bump: minor }
+  - put: tile-version
+    params: { file: tile-version/number }
+- name: bump-tile-major
+  public: true
+  plan:
+  - get: tile-version
+    params: { bump: major }
+  - put: tile-version
+    params: { file: tile-version/number }

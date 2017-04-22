@@ -1,0 +1,22 @@
+---
+platform: linux
+
+image_resource:
+  type: docker-image
+  source:
+    repository: cfplatformeng/tile-generator
+
+inputs:
+- name: pipeline-source
+- name: tile-source
+- name: version
+- name: bosh-release-binary
+
+outputs:
+- name: build-tile-output
+
+params:
+  BLOBSTORE_SECRET:
+
+run:
+  path: pipeline-source/tasks/build-tile/task.sh
