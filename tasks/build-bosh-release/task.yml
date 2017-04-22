@@ -1,0 +1,19 @@
+---
+platform: linux
+
+image_resource:
+  type: docker-image
+  source:
+    repository: cfplatformeng/tile-generator
+
+inputs:
+- name: pipeline-source
+- name: bosh-release-source
+- name: version
+- name: nozzle-binary
+
+outputs:
+- name: build-bosh-release-output
+
+run:
+  path: pipeline-source/tasks/build-bosh-release/task.sh

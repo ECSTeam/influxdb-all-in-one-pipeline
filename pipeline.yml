@@ -6,13 +6,29 @@ on_failure: &generic_failure_notificaton
       channel: "#topic-pipeline-alerts"
       username: concourse
       text: |
-        :thumbsdown: A build failed! Check the status at <$ATC_EXTERNAL_URL/builds/$BUILD_ID>
+        :thumbsdown: Job $BUILD_JOB_NAME failed!
 
-resources_types:
+        Job details: <$ATC_EXTERNAL_URL/teams/$BUILD_TEAM_NAME/pipelines/$BUILD_PIPELINE_NAME/jobs/$BUILD_JOB_NAME/builds/$BUILD_NAME>
+
+on_success: &generic_success_notification
+  do:
+  - put: notify
+    params:
+      channel: "#topic-pipeline-alerts"
+      username: concourse
+      text_file: version/number
+      text: |
+        :thumbsup: A new version of $BUILD_JOB_NAME has been built.
+
+        Release: <https://github.com/ECSTeam/$BUILD_JOB_NAME/releases/v$TEXT_FILE_CONTENT>
+        Job: <$ATC_EXTERNAL_URL/teams/$BUILD_TEAM_NAME/pipelines/$BUILD_PIPELINE_NAME/jobs/$BUILD_JOB_NAME/builds/$BUILD_NAME>
+
+resource_types:
 - name: slack-notification
   type: docker-image
   source:
     repository: cfcommunity/slack-notification-resource
+    tag: latest
 
 resources:
 - name: nozzle-source
@@ -22,32 +38,11 @@ resources:
     branch: master
     private_key: {{github-private-key}}
 
-- name: bosh-release-source
-  type: git
-  source:
-    uri: git@github.com:ecsteam/influxdb-nozzle-bosh-release.git
-    branch: master
-    private_key: {{github-private-key}}
-
-- name: tile-source
-  type: git
-  source:
-    uri: git@github.com:ecsteam/influxdb-tile.git
-    branch: {{tile-branch}}
-    private_key: {{github-private-key}}
-
-- name: pipeline-source
-  type: git
-  source:
-    uri: git@github.com:ecsteam/influxdb-all-in-one-pipeline.git
-    branch: master
-    private_key: {{github-private-key}}
-
-- name: version
+- name: nozzle-version
   type: semver
   source:
     bucket: {{version-s3-bucket}}
-    key: {{version-s3-key}}
+    key: {{nozzle-version-s3-key}}
     access_key_id: {{version-s3-access-key}}
     secret_access_key: {{version-s3-secret-key}}
     region_name: {{version-s3-region}}
@@ -56,90 +51,151 @@ resources:
 - name: nozzle-binary
   type: github-release
   source:
-    owner: ECSTeam
+    user: ECSTeam
     repository: influxdb-nozzle
     access_token: {{github-access-token}}
+
+- name: bosh-release-source
+  type: git
+  source:
+    uri: git@github.com:ecsteam/influxdb-nozzle-bosh-release.git
+    branch: master
+    private_key: {{github-private-key}}
+
+- name: bosh-release-version
+  type: semver
+  source:
+    bucket: {{version-s3-bucket}}
+    key: {{bosh-release-version-s3-key}}
+    access_key_id: {{version-s3-access-key}}
+    secret_access_key: {{version-s3-secret-key}}
+    region_name: {{version-s3-region}}
+    initial_version: 0.0.1
 
 - name: bosh-release-binary
   type: github-release
   source:
-    owner: ECSTeam
+    user: ECSTeam
     repository: influxdb-nozzle-bosh-release
     access_token: {{github-access-token}}
 
-- name: tile-binary
-  type: github-release
+# - name: tile-source
+#   type: git
+#   source:
+#     uri: git@github.com:ecsteam/influxdb-tile.git
+#     branch: {{tile-branch}}
+#     private_key: {{github-private-key}}
+
+# - name: tile-version
+#   type: semver
+#   source:
+#     bucket: {{version-s3-bucket}}
+#     key: {{tile-version-s3-key}}
+#     access_key_id: {{version-s3-access-key}}
+#     secret_access_key: {{version-s3-secret-key}}
+#     region_name: {{version-s3-region}}
+#     initial_version: 0.4.3
+#
+# - name: tile-binary
+#   type: github-release
+#   source:
+#     user: ECSTeam
+#     repository: influxdb-all-in-one-pipeline
+#     access_token: {{github-access-token}}
+
+- name: pipeline-source
+  type: git
   source:
-    owner: ECSTeam
-    repository: influxdb-all-in-one-pipeline
-    access_token: {{github-access-token}}
+    uri: git@github.com:ecsteam/influxdb-all-in-one-pipeline.git
+    branch: master
+    private_key: {{github-private-key}}
 
 - name: notify
   type: slack-notification
   source:
-    url: https://hooks.slack.com/services/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
+    url: {{slack-webhook-url}}
 
 jobs:
 - name: nozzle-unit-tests
-  public: true
   plan:
   - aggregate:
     - get: pipeline-source
     - get: nozzle-source
       trigger: true
-    - get: version
-      params: { bump: patch }
+    - get: nozzle-version
   - task: run-unit-tests
     file: pipeline-source/tasks/run-unit-tests/task.yml
+  on_failure: *generic_failure_notificaton
 
-- name: build-nozzle
+- name: influxdb-nozzle
   public: true
   plan:
   - aggregate:
       - get: pipeline-source
       - get: nozzle-source
         trigger: true
-        passed: [unit-tests]
+        passed: [nozzle-unit-tests]
       - get: version
-        trigger: true
-        passed: [unit-tests]
+        resource: nozzle-version
   - task: set-pom-version
     file: pipeline-source/tasks/set-version/task.yml
   - task: build-nozzle-jar
     file: pipeline-source/tasks/build-jar/task.yml
-  - put: release
+  - put: nozzle-binary
     params:
-      name: version/number
-      tag: version/number
+      name: nozzle-version/number
+      tag: nozzle-version/number
       tag_prefix: v
       globs:
       - build-nozzle-output/influxdb-nozzle.jar
-  on_success:
-    do:
-    - put: notify
-      params:
-        channel: "#topic-pipeline-alerts"
-        username: concourse
-        text_file: version/number
-        text: |
-          :thumbsup: A new version of `influxdb-nozzle` has been built.
-
-          Release: <https://github.com/ECSTeam/influxdb-nozzle/releases/v$TEXT_FILE_CONTENT
-          Job: <$ATC_EXTERNAL_URL/builds/$BUILD_ID>
+  - put: nozzle-version
+    params:
+      bump: patch
+      file: nozzle-version/number
+  on_success: *generic_success_notification
   on_failure: *generic_failure_notificaton
 
-
-- name: bump-minor
+- name: bump-nozzle-minor
   public: true
   plan:
-  - get: version
+  - get: nozzle-version
     params: { bump: minor }
-  - put: version
-    params: { file: version/number }
-- name: bump-major
+  - put: nozzle-version
+    params: { file: nozzle-version/number }
+- name: bump-nozzle-major
   public: true
   plan:
-  - get: version
+  - get: nozzle-version
     params: { bump: major }
-  - put: version
-    params: { file: version/number }
+  - put: nozzle-version
+    params: { file: nozzle-version/number }
+
+- name: influxdb-nozzle-bosh-release
+  plan:
+  - aggregate:
+    - get: nozzle-binary
+      trigger: true
+    - get: bosh-release-source
+      trigger: true
+    - get: version
+      resource: bosh-release-version
+    - get: pipeline-source
+  - task: build-bosh-release
+    file: pipeline-source/tasks/build-bosh-release/task.yml
+  on_success: *generic_success_notification
+  on_failure: *generic_failure_notificaton
+
+- name: bump-bosh-release-minor
+  public: true
+  plan:
+  - get: bosh-release-version
+    params: { bump: minor }
+  - put: bosh-release-version
+    params: { file: bosh-release-version/number }
+- name: bump-bosh-release-major
+  public: true
+  plan:
+  - get: bosh-release-version
+    params: { bump: major }
+  - put: bosh-release-version
+    params: { file: bosh-release-version/number }
