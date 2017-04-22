@@ -9,7 +9,7 @@ versionfile=`pwd`/version/number
 
 num=`cat ${versionfile}`
 
-curl -o ${basedir}/cf-linux-amd64.tgz 'http://cli.run.pivotal.io/stable?release=linux64-binary&source=github-rel'
+curl -Lo ${basedir}/cf-linux-amd64.tgz 'http://cli.run.pivotal.io/stable?release=linux64-binary&source=github-rel'
 
 cd ${basedir}/bosh-release-source
 

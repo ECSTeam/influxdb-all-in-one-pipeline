@@ -30,6 +30,19 @@ resource_types:
     repository: cfcommunity/slack-notification-resource
     tag: latest
 
+groups:
+- name: Nozzle
+  jobs:
+  - nozzle-unit-tests
+  - influxdb-nozzle
+  - bump-nozzle-minor
+  - bump-nozzle-major
+- name: BOSH Release
+  jobs:
+  - influxdb-nozzle-bosh-release
+  - bump-bosh-release-minor
+  - bump-bosh-release-major
+
 resources:
 - name: nozzle-source
   type: git
