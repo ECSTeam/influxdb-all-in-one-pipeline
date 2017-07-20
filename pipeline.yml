@@ -5,10 +5,12 @@ on_failure: &generic_failure_notificaton
     params:
       channel: "#topic-pipeline-alerts"
       username: concourse
+      attachments:
+      - color: "danger"
+        title: ":white_frowning_face: Build Failed"
+        #title_link: "$ATC_EXTERNAL_URL/teams/$BUILD_TEAM_NAME/pipelines/$BUILD_PIPELINE_NAME/jobs/$BUILD_JOB_NAME/builds/$BUILD_NAME"
       text: |
-        :thumbsdown: Job $BUILD_JOB_NAME failed!
-
-        Job details: <$ATC_EXTERNAL_URL/teams/$BUILD_TEAM_NAME/pipelines/$BUILD_PIPELINE_NAME/jobs/$BUILD_JOB_NAME/builds/$BUILD_NAME>
+        *Job*: <$ATC_EXTERNAL_URL/teams/$BUILD_TEAM_NAME/pipelines/$BUILD_PIPELINE_NAME/jobs/$BUILD_JOB_NAME/builds/$BUILD_NAME|$BUILD_JOB_NAME $BUILD_NAME>
 
 on_success: &generic_success_notification
   do:
@@ -17,11 +19,12 @@ on_success: &generic_success_notification
       channel: "#topic-pipeline-alerts"
       username: concourse
       text_file: version/number
+      attachments:
+      - color: "good"
+        title: ":smiley: Build Successful"
       text: |
-        :thumbsup: A new version of $BUILD_JOB_NAME has been built.
-
-        Release: <https://github.com/ECSTeam/$BUILD_JOB_NAME/releases/v$TEXT_FILE_CONTENT>
-        Job: <$ATC_EXTERNAL_URL/teams/$BUILD_TEAM_NAME/pipelines/$BUILD_PIPELINE_NAME/jobs/$BUILD_JOB_NAME/builds/$BUILD_NAME>
+        *Release*: <https://github.com/ECSTeam/$BUILD_JOB_NAME/releases/v$TEXT_FILE_CONTENT|$TEXT_FILE_CONTENT>
+        *Job*: <$ATC_EXTERNAL_URL/teams/$BUILD_TEAM_NAME/pipelines/$BUILD_PIPELINE_NAME/jobs/$BUILD_JOB_NAME/builds/$BUILD_NAME|$BUILD_JOB_NAME $BUILD_NAME>
 
 resource_types:
 - name: slack-notification
@@ -211,7 +214,21 @@ jobs:
   - put: bosh-release-version
     params:
       bump: patch
-  on_success: *generic_success_notification
+  on_success:
+    do:
+    - put: notify
+      params:
+        channel: "#topic-pipeline-alerts"
+        username: concourse
+        text_file: version/number
+        attachments:
+        - color: "good"
+          title: ":smiley: Build Successful"
+        #  title_link: "$ATC_EXTERNAL_URL/teams/$BUILD_TEAM_NAME/pipelines/$BUILD_PIPELINE_NAME/jobs/$BUILD_JOB_NAME/builds/$BUILD_NAME"
+        text: |
+          You can now trigger a build of influxdb-tile manually, if you choose. Click <$ATC_EXTERNAL_URL/teams/$BUILD_TEAM_NAME/pipelines/$BUILD_PIPELINE_NAME/jobs/influxdb-tile|here> to do so.
+          *Release*: <https://github.com/ECSTeam/$BUILD_JOB_NAME/releases/v$TEXT_FILE_CONTENT|$TEXT_FILE_CONTENT>
+          *Job*: <$ATC_EXTERNAL_URL/teams/$BUILD_TEAM_NAME/pipelines/$BUILD_PIPELINE_NAME/jobs/$BUILD_JOB_NAME/builds/$BUILD_NAME|$BUILD_JOB_NAME $BUILD_NAME>
   on_failure: *generic_failure_notificaton
 
 
@@ -236,7 +253,6 @@ jobs:
     - get: tile-source
       trigger: true
     - get: bosh-release-binary
-      trigger: true
     - get: version
       resource: tile-version
     - get: pipeline-source
